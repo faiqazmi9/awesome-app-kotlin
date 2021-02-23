@@ -14,6 +14,7 @@ import com.example.awesomeapp.model.Item
 class ItemAdapter(private val mItems: List<*>, private val mLayoutManager: GridLayoutManager) :
     RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
     private var itemOnClickListener: ItemOnClickListener? = null
+
     override fun getItemViewType(position: Int): Int {
         val spanCount = mLayoutManager.spanCount
         return if (spanCount == SPAN_COUNT_ONE) {
@@ -35,8 +36,8 @@ class ItemAdapter(private val mItems: List<*>, private val mLayoutManager: GridL
 
     override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
         val item: Item = mItems[position] as Item
-        holder.title.setText(item.getTitle())
-        holder.iv.setImageResource(item.getImgResId())
+        holder.title.setText(item.title)
+        holder.iv.setImageResource(item.imgResId)
         holder.mView.setOnClickListener { view: View? ->
             if (itemOnClickListener != null) {
                 itemOnClickListener!!.onClick(position, item)
