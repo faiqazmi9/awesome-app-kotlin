@@ -5,39 +5,53 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.AbsListView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.android.volley.AuthFailureError
+import com.android.volley.Response
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.example.awesomeapp.adapter.ItemAdapter
 import com.example.awesomeapp.adapter.ItemAdapter.Companion.SPAN_COUNT_ONE
 import com.example.awesomeapp.adapter.ItemAdapter.Companion.SPAN_COUNT_TWO
 import com.example.awesomeapp.model.Item
 import com.google.android.material.appbar.MaterialToolbar
+import org.json.JSONException
+import org.json.JSONObject
 import java.util.*
 
-open class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
     private var recyclerView: RecyclerView? = null
     private var itemAdapter: ItemAdapter? = null
     private var gridLayoutManager: GridLayoutManager? = null
-    private var items: MutableList<*>? = null
+    private var items: MutableList<Item>? = null
     var mToolbar: MaterialToolbar? = null
+    var mTvError: TextView? = null
+    private var pageNumber = 1
+    private var isScrolling = false
+    private var totalItems = 0
+    private var scrollOutItems = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mToolbar = findViewById(R.id.toolbar)
+        mTvError = findViewById(R.id.tv_error)
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true)
         setupToolbar()
-        initItemsData()
         setAdapter()
+        fetchItem()
     }
 
-    private fun setupToolbar() {
+    protected fun setupToolbar() {
         setSupportActionBar(mToolbar)
         val mActionBar = this.supportActionBar!!
         mToolbar!!.setTitleTextColor(ContextCompat.getColor(this, R.color.white))
-        mActionBar.title = "Nature"
+        mActionBar.title = "Awesome App"
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -62,114 +76,107 @@ open class MainActivity : AppCompatActivity() {
     }
 
     private fun setAdapter() {
+        items = ArrayList()
         gridLayoutManager = GridLayoutManager(this, SPAN_COUNT_ONE)
-        itemAdapter = ItemAdapter(items!!, gridLayoutManager!!)
+        itemAdapter = ItemAdapter(items as ArrayList<Item>, this, gridLayoutManager!!)
         recyclerView = findViewById<View>(R.id.recycler_view) as RecyclerView
         recyclerView!!.adapter = itemAdapter
         recyclerView!!.layoutManager = gridLayoutManager
-        itemAdapter!!.itemClick(object : ItemAdapter.ItemListener {
-            override fun onClick(position: Int, item: Item) {
+        itemAdapter!!.itemOnClick(object : ItemAdapter.ItemOnClickListener {
+            override fun onClick(pos: Int, item: Item?) {
                 val intent = Intent(this@MainActivity, DetailImageActivity::class.java)
                 val bundle = Bundle()
-                bundle.putString("title", item.title)
-                bundle.putString("desc", item.description)
-                bundle.putInt("img", item.imgResId)
+                bundle.putString("img", item?.original)
+                bundle.putString("title", item?.photographer)
+                bundle.putString("url", item?.photographerUrl)
                 intent.putExtras(bundle)
                 startActivity(intent)
                 overridePendingTransition(R.anim.slide_from_left, R.anim.slide_to_right)
             }
         })
+        recyclerView!!.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
+                    isScrolling = true
+                }
+            }
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                totalItems = gridLayoutManager!!.itemCount
+                scrollOutItems = gridLayoutManager!!.findLastVisibleItemPosition()
+                if (scrollOutItems > totalItems - 2 && dy > 0) {
+                    isScrolling = false
+                    fetchItem()
+                }
+            }
+        })
     }
 
-    private fun initItemsData() {
-        items = ArrayList<Any>()
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.bird,
-                "Bird",
-                "This picture was taken in Punta del Este, Uruguay"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.bird1, "Bird 1", "Preety little owl"))
-        (items as ArrayList<Any>).add(Item(R.drawable.bird2, "Bird 2", "Owl serious mode on"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.butterfly,
-                "Butterfly",
-                "Very Beautifull Butterfly"
-            )
-        )
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.cactus,
-                "Cactus",
-                "A cactus is a member of the plant family Cactaceae"
-            )
-        )
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.fish,
-                "Fish",
-                "This picture was taken in Indonesia"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.flower, "Flower", "The Red Flower"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.flower1,
-                "Flower 1",
-                "Beautifull Flower in London, United Kingdom"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.flower2, "Flower 2", "Calm flower"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.flower3,
-                "Flower 3",
-                "Beautifull pinky flower"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.lake, "Lake", "Lake create the reflection"))
-        (items as ArrayList<Any>).add(Item(R.drawable.leaf, "Leaf", "Green in the sky"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.leaf1,
-                "Leaf 1",
-                "In the morning with breezy air"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.leaf2, "Leaf 2", "Leaf with darkness"))
-        (items as ArrayList<Any>).add(Item(R.drawable.leaf3, "Leaf 3", "Mexican leaf"))
-        (items as ArrayList<Any>).add(Item(R.drawable.moon, "Moon", "Reaching the moon"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.mountain,
-                "Mountain",
-                "Great mount with lake"
-            )
-        )
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.mountain1,
-                "Mountain 1",
-                "the blue dew faded at the horizon"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.mountain2, "Mountain 2", "cheerful camper"))
-        (items as ArrayList<Any>).add(
-            Item(
-                R.drawable.mountain3,
-                "Mountain 3",
-                "United States Great Mount"
-            )
-        )
-        (items as ArrayList<Any>).add(Item(R.drawable.mushroom, "Moshroom", "Li'l Mushroom"))
-        (items as ArrayList<Any>).add(Item(R.drawable.ocean, "Ocean", "Oceanic animal"))
-        (items as ArrayList<Any>).add(Item(R.drawable.rainbow, "Rainbow", "Happy rainbow"))
-        (items as ArrayList<Any>).add(Item(R.drawable.tree, "Tree", "Holaa Beach ..."))
-        (items as ArrayList<Any>).add(Item(R.drawable.waterfall, "Waterfall", "Amazing waterfall"))
-        (items as ArrayList<Any>).add(Item(R.drawable.wave, "Wave", "Wave the ocean"))
-        (items as ArrayList<Any>).add(Item(R.drawable.wave1, "Wave 1", "Hi beautifull beach"))
-        (items as ArrayList<Any>).add(Item(R.drawable.wave2, "Wave 2", "Lets Surf!"))
+    private fun fetchItem() {
+        val request: StringRequest = object : StringRequest(
+            Method.GET,
+            "https://api.pexels.com/v1/curated/?page=$pageNumber&per_page=10",
+            Response.Listener { response ->
+                try {
+                    val jsonObject = JSONObject(response)
+                    val jsonArray = jsonObject.getJSONArray("photos")
+                    val length = jsonArray.length()
+                    for (i in 0 until length) {
+                        val `object` = jsonArray.getJSONObject(i)
+                        val id = `object`.getInt("id")
+                        val width = `object`.getInt("width")
+                        val height = `object`.getInt("height")
+                        val url = `object`.getString("url")
+                        val photographer = `object`.getString("photographer")
+                        val photographerUrl = `object`.getString("photographer_url")
+                        val photographerId = `object`.getInt("photographer_id")
+                        val avgColor = `object`.getString("avg_color")
+                        val objectImages = `object`.getJSONObject("src")
+                        val original = objectImages.getString("original")
+                        val large2x = objectImages.getString("large2x")
+                        val large = objectImages.getString("large")
+                        val medium = objectImages.getString("medium")
+                        val small = objectImages.getString("small")
+                        val portrait = objectImages.getString("portrait")
+                        val landscape = objectImages.getString("landscape")
+                        val tiny = objectImages.getString("tiny")
+                        val item = Item(
+                            id,
+                            width,
+                            height,
+                            url,
+                            photographer,
+                            photographerUrl,
+                            photographerId,
+                            avgColor,
+                            original,
+                            large2x,
+                            large,
+                            medium,
+                            small,
+                            portrait,
+                            landscape,
+                            tiny
+                        )
+                        items!!.add(item)
+                    }
+                    itemAdapter!!.notifyDataSetChanged()
+                    pageNumber++
+                    mTvError!!.visibility = View.GONE
+                } catch (e: JSONException) {
+                    mTvError!!.visibility = View.VISIBLE
+                }
+            }, Response.ErrorListener { }) {
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val params: MutableMap<String, String> = HashMap()
+                params["Authorization"] = "563492ad6f91700001000001ce82035986834c05a3757fd52bd5a50d"
+                return params
+            }
+        }
+        val requestQueue = Volley.newRequestQueue(applicationContext)
+        requestQueue.add(request)
     }
 }
