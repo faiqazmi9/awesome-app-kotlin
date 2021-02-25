@@ -172,7 +172,7 @@ class MainActivity : AppCompatActivity() {
             @Throws(AuthFailureError::class)
             override fun getHeaders(): Map<String, String> {
                 val params: MutableMap<String, String> = HashMap()
-                params["Authorization"] = "563492ad6f91700001000001ce82035986834c05a3757fd52bd5a50d"
+                params["Authorization"] = "Apikey"
                 return params
             }
         }
